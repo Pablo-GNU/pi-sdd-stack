@@ -4,6 +4,8 @@ import { getChangePaths } from "../openspec/changePaths.js";
 import { PHASE_NAMES, type PhaseName } from "../models/phaseRoutes.js";
 import { getPhaseNode, listPhaseGraph, type PhaseNode } from "./phaseGraph.js";
 import { readVerifyStatus, VERIFY_STATUSES } from "./verifyStatus.js";
+import { readRuntimeState, type RuntimeSessionRef } from "./runtimeState.js";
+import { resolveProjectStatePaths } from "./projectState.js";
 
 export interface PhaseStatus {
   phase: PhaseName;
@@ -23,9 +25,9 @@ function phaseArtifactExists(repoRoot: string, slug: string, phase: PhaseName): 
     case PHASE_NAMES.GREENFIELD_ONBOARD:
       return pathExists(path.join(repoRoot, "AGENTS.md")) || pathExists(path.join(repoRoot, "README.md"));
     case PHASE_NAMES.CURRENT_STATE_EXPLORE:
-      return pathExists(changePaths.prd) || pathExists(changePaths.proposal) || hasAnyDocumentation(repoRoot);
+      return pathExists(path.join(changePaths.root, "current-state.md")) || pathExists(changePaths.prd) || pathExists(changePaths.proposal) || hasAnyDocumentation(repoRoot);
     case PHASE_NAMES.DOCUMENTATION_REVIEW:
-      return pathExists(path.join(repoRoot, "openspec")) || hasAnyDocumentation(repoRoot);
+      return pathExists(path.join(changePaths.root, "documentation-review.md")) || pathExists(path.join(repoRoot, "openspec")) || hasAnyDocumentation(repoRoot);
     case PHASE_NAMES.PRD:
       return pathExists(changePaths.prd);
     case PHASE_NAMES.SPEC:
@@ -43,6 +45,11 @@ function phaseArtifactExists(repoRoot: string, slug: string, phase: PhaseName): 
     case PHASE_NAMES.BUGFIX_MEMORY:
       return false;
   }
+}
+
+export async function bugfixMemoryArtifactExists(repoRoot: string, slug: string): Promise<boolean> {
+  const statePaths = await resolveProjectStatePaths(repoRoot);
+  return pathExists(path.join(statePaths.memoryDir, `${slug}.md`));
 }
 
 export function getPhaseStatuses(repoRoot: string, slug: string): PhaseStatus[] {
@@ -119,12 +126,37 @@ export function formatPhaseStatuses(repoRoot: string, slug: string): string {
   return lines.join("\n");
 }
 
-export async function formatPhaseStatusesAsync(repoRoot: string, slug: string): Promise<string> {
+export async function formatPhaseStatusesAsync(repoRoot: string, slug: string, session?: RuntimeSessionRef): Promise<string> {
   const statuses = getPhaseStatuses(repoRoot, slug);
+  const runtime = await readRuntimeState(repoRoot, session);
+  const bugfixDone = await bugfixMemoryArtifactExists(repoRoot, slug);
   const lines = [`pi-sdd-stack phase status for ${slug}`, "", "phases:"];
 
   for (const status of statuses) {
+    if (status.phase === PHASE_NAMES.BUGFIX_MEMORY && bugfixDone) {
+      lines.push(`- ${status.phase}: completed — Operational bugfix memory already captured.`);
+      continue;
+    }
     lines.push(`- ${status.phase}: ${status.state} — ${status.reason}`);
+  }
+
+  if (runtime.active && runtime.active.slug === slug) {
+    lines.push(
+      "",
+      "active-delegation:",
+      `- label: ${runtime.active.label}`,
+      `- phase: ${runtime.active.phase}`,
+      `- status: ${runtime.active.status}`,
+      `- started: ${runtime.active.startedAt}`,
+      `- updated: ${runtime.active.updatedAt}`,
+    );
+  }
+
+  if (runtime.history.some((entry) => entry.slug === slug)) {
+    lines.push("", "recent-delegations:");
+    for (const entry of runtime.history.filter((item) => item.slug === slug).slice(0, 5)) {
+      lines.push(`- ${entry.label}: phase=${entry.phase} status=${entry.status} updated=${entry.updatedAt}`);
+    }
   }
 
   const next = await getNextRecommendedPhaseAsync(repoRoot, slug);

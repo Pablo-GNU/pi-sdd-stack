@@ -9,6 +9,10 @@ metadata:
 
 # sdd-stack-verify
 
+Parent-session rule:
+- Do not run verification phase in parent window after routing.
+- Launch verify as subagent first.
+
 Verification must map requirements and tasks to evidence.
 
 - cite tests, commands, or manual checks

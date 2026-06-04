@@ -18,7 +18,7 @@ export async function runContinue(cwd: string, slug: string): Promise<string> {
     case PHASE_NAMES.SPEC:
     case PHASE_NAMES.DESIGN:
     case PHASE_NAMES.TASKS:
-      return `phase=${next.phase}\n${await runPlan(cwd, slug)}`;
+      return `phase=${next.phase}\n${await runPlan(cwd, slug, next.phase)}`;
     case PHASE_NAMES.APPLY:
       return `phase=${next.phase}\n${await runApply(cwd, slug)}`;
     case PHASE_NAMES.VERIFY:

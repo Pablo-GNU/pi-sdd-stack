@@ -9,6 +9,10 @@ metadata:
 
 # sdd-stack-prd-to-sdd
 
+Parent-session rule:
+- Do not generate proposal/spec/design/tasks in parent window after routing.
+- Launch planning phase as subagent first.
+
 Transformation order:
 
 `prd.md -> proposal.md -> specs/**/spec.md -> design.md -> tasks.md -> verify.md -> archive`

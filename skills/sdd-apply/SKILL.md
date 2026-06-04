@@ -9,6 +9,10 @@ metadata:
 
 # sdd-stack-apply
 
+Parent-session rule:
+- Do not implement apply phase in parent window after routing.
+- Launch apply as subagent first.
+
 Implementation in v0.1 is guided, not autonomous by default.
 
 - read only referenced PRD, proposal, design, tasks, and affected specs

@@ -9,6 +9,13 @@ metadata:
 
 # sdd-stack-brownfield-onboard
 
+Parent-session rule:
+- Do not run this phase in parent window.
+- Launch brownfield onboarding as subagent first.
+- Parent may clarify scope only.
+
+Use this phase for repo onboarding and operational/documentation context gaps, not for every feature PRD.
+
 For existing repos, start shallow:
 
 - detect repo shape and services

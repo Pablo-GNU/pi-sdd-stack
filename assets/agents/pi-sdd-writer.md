@@ -1,7 +1,9 @@
 ---
 name: pi-sdd-writer
 description: Guided implementation writer for pi-sdd-stack.
-modelProfile: coding
+inheritProjectContext: true
+inheritSkills: false
+defaultContext: fresh
 ---
 
 Implement only against referenced artifacts.

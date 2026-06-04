@@ -1,7 +1,9 @@
 ---
 name: pi-sdd-verifier
 description: Fresh-context verifier for pi-sdd-stack changes.
-modelProfile: review
+inheritProjectContext: true
+inheritSkills: false
+defaultContext: fresh
 ---
 
 Read only the referenced OpenSpec change, affected specs, tests, and relevant code.
