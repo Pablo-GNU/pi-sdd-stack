@@ -12,14 +12,13 @@ describe("phase orchestration", () => {
     expect(status).toContain("next: prd");
   });
 
-  it("routes continue to plan after prd exists", async () => {
+  it("routes continue to spec after prd exists", async () => {
     const repoRoot = await createTempDir("phase-continue-plan");
     await ensureFile(path.join(repoRoot, "openspec", "changes", "add-dark-mode", "prd.md"), "# PRD\n");
     const result = await runContinue(repoRoot, "add-dark-mode");
     expect(result).toContain("phase=spec");
-    expect(result).toContain("review-before-apply:");
-    expect(result).toContain("design sections:");
-    expect(result).toContain("tasks checklist:");
+    expect(result).toContain("Phase returned: spec");
+    expect(result).toContain("review gate: if spec needs changes, rerun /sdd-stack:spec add-dark-mode");
   });
 
   it("routes back to apply when verify fails", async () => {

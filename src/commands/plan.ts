@@ -1,6 +1,8 @@
 import path from "node:path";
 import { classifyFeatureImpact } from "../openspec/impactClassifier.js";
 import { getChangePaths } from "../openspec/changePaths.js";
+import { PHASE_NAMES, type PhaseName } from "../models/phaseRoutes.js";
+import { buildPhaseReturnDigest } from "../sdd/phaseDigest.js";
 import { describeTddMode, readTddMode } from "../testing/tddMode.js";
 import { ensureDir, readText, writeText } from "../util/fs.js";
 import { resolvePackageRoot } from "../util/runtimePaths.js";
@@ -32,29 +34,7 @@ function render(name: string, template: string, slug: string, domain: string): s
     .replaceAll("{{removalReason}}", "TODO explain why it is removed.");
 }
 
-function summarizeDesignAndTasks(designContent: string, tasksContent: string): string {
-  const designSections = designContent
-    .split("\n")
-    .filter((line) => line.startsWith("## "))
-    .map((line) => `- ${line.replace(/^##\s+/, "")}`);
-
-  const taskItems = tasksContent
-    .split("\n")
-    .filter((line) => line.trim().startsWith("- [ ]") || line.trim().startsWith("- [x]"))
-    .slice(0, 8)
-    .map((line) => line.trim());
-
-  return [
-    "review-before-apply:",
-    "design sections:",
-    ...(designSections.length > 0 ? designSections : ["- TODO review generated design"]),
-    "tasks checklist:",
-    ...(taskItems.length > 0 ? taskItems : ["- TODO review generated tasks"]),
-    "next-step: review design and tasks together before starting apply.",
-  ].join("\n");
-}
-
-export async function runPlan(cwd: string, slug: string): Promise<string> {
+export async function runPlan(cwd: string, slug: string, phase: PhaseName = PHASE_NAMES.SPEC): Promise<string> {
   const impact = await classifyFeatureImpact({ repoRoot: cwd, changeSlug: slug, summary: slug });
   const tddMode = await readTddMode(cwd);
   const paths = getChangePaths(cwd, slug);
@@ -62,27 +42,34 @@ export async function runPlan(cwd: string, slug: string): Promise<string> {
   const designTemplate = await loadTemplate("design");
   const tasksTemplate = await loadTemplate("tasks");
   const specTemplate = await loadTemplate("spec");
+  const primaryDomain = impact.affectedDomains[0] ?? "domain";
 
-  const proposalContent = render("proposal", proposalTemplate, slug, impact.affectedDomains[0] ?? "domain");
-  const designContent = render("design", designTemplate, slug, impact.affectedDomains[0] ?? "domain");
-  const tasksContent = render("tasks", tasksTemplate, slug, impact.affectedDomains[0] ?? "domain");
+  if (phase === PHASE_NAMES.SPEC) {
+    const proposalContent = render("proposal", proposalTemplate, slug, primaryDomain);
+    await writeText(paths.proposal, proposalContent);
 
-  await writeText(paths.proposal, proposalContent);
-  await writeText(paths.design, designContent);
-  await writeText(paths.tasks, tasksContent);
-
-  const domains = [...new Set([...impact.affectedDomains, ...impact.newDomainsNeeded])];
-  for (const domain of domains.length > 0 ? domains : [slug.split("-")[0] ?? "domain"]) {
-    const specPath = path.join(paths.specsDir, domain, "spec.md");
-    await ensureDir(path.dirname(specPath));
-    await writeText(specPath, render("spec", specTemplate, slug, domain));
+    const domains = [...new Set([...impact.affectedDomains, ...impact.newDomainsNeeded])];
+    for (const domain of domains.length > 0 ? domains : [slug.split("-")[0] ?? "domain"]) {
+      const specPath = path.join(paths.specsDir, domain, "spec.md");
+      await ensureDir(path.dirname(specPath));
+      await writeText(specPath, render("spec", specTemplate, slug, domain));
+    }
   }
 
+  if (phase === PHASE_NAMES.DESIGN) {
+    await writeText(paths.design, render("design", designTemplate, slug, primaryDomain));
+  }
+
+  if (phase === PHASE_NAMES.TASKS) {
+    await writeText(paths.tasks, render("tasks", tasksTemplate, slug, primaryDomain));
+  }
+
+  const digest = await buildPhaseReturnDigest(cwd, slug, phase);
   return [
     `impact=${impact.kind}`,
     `tdd-mode=${tddMode}`,
-    `artifacts=${[paths.proposal, paths.design, paths.tasks].map((entry) => path.relative(cwd, entry)).join(", ")}`,
+    `phase=${phase}`,
     describeTddMode(tddMode),
-    summarizeDesignAndTasks(designContent, tasksContent),
+    ...(digest ? ["", digest] : []),
   ].join("\n");
 }

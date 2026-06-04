@@ -9,6 +9,11 @@ metadata:
 
 # sdd-stack-greenfield-onboard
 
+Parent-session rule:
+- Do not run this phase in parent window.
+- Launch greenfield onboarding as subagent first.
+- Parent may clarify scope only.
+
 For new product spaces:
 
 - define problem and user goals first

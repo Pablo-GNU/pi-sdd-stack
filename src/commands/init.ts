@@ -6,6 +6,8 @@ import { installOpenSpecSchema } from "../openspec/schemaInstaller.js";
 import { ensureDir, writeText, writeYaml } from "../util/fs.js";
 import { assertRequirements } from "../util/requirements.js";
 import { resolvePackageRoot } from "../util/runtimePaths.js";
+import { ensureManagedSubagents } from "../subagents/phaseDelegation.js";
+import { resolveProjectStatePaths } from "../sdd/projectState.js";
 
 export interface InitOptions {
   withIntegrations?: boolean;
@@ -42,18 +44,19 @@ export async function runInit(cwd: string, args: string): Promise<string> {
   const agentsResult = await generateAgentsFile({
     ...agentsOptions,
   });
+  const subagentResults = await ensureManagedSubagents(scan.root, import.meta.url);
 
-  const projectDir = path.join(scan.root, ".pi", "sdd-stack");
-  await ensureDir(path.join(projectDir, "cache"));
-  await writeText(path.join(projectDir, "cache", ".gitkeep"), "");
-  await writeYaml(path.join(projectDir, "project-profile.yaml"), scan);
-  await writeYaml(path.join(projectDir, "settings.yaml"), {
+  const statePaths = await resolveProjectStatePaths(scan.root);
+  await ensureDir(statePaths.cacheDir);
+  await writeText(path.join(statePaths.cacheDir, ".gitkeep"), "");
+  await writeYaml(statePaths.projectProfilePath, scan);
+  await writeYaml(statePaths.settingsPath, {
     version: 1,
     stack: "pi-sdd-stack",
     integrations: {
       engram: false,
       caveman: false,
-      subagents: false,
+      subagents: true,
     },
     openspec: {
       schema: "pi-sdd-stack",
@@ -80,8 +83,9 @@ export async function runInit(cwd: string, args: string): Promise<string> {
 
   const notes = [
     `AGENTS: ${agentsResult.mode} ${agentsResult.status} at ${path.relative(scan.root, agentsResult.targetPath)}`,
-    `project profile: .pi/sdd-stack/project-profile.yaml`,
-    `settings: .pi/sdd-stack/settings.yaml`,
+    `project profile: ${statePaths.projectProfilePath}`,
+    `subagents: ${subagentResults.map((entry) => `${entry.name}=${entry.status}`).join(", ")}`,
+    `settings: ${statePaths.settingsPath}`,
     `models: ${ModelRouter.userConfigPath()}`,
     `openspec: ${schemaResult.skipped ? "skipped" : `ready at ${path.relative(scan.root, schemaResult.schemaPath ?? scan.root)}`}`,
   ];

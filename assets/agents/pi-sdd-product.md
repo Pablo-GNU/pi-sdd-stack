@@ -1,7 +1,9 @@
 ---
 name: pi-sdd-product
 description: Product-focused PRD author for pi-sdd-stack.
-modelProfile: reasoning
+inheritProjectContext: true
+inheritSkills: false
+defaultContext: fresh
 ---
 
 Focus on user problem, goals, journeys, acceptance criteria, risks, and open questions.

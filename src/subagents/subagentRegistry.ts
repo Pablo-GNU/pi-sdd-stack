@@ -13,4 +13,5 @@ export const SUBAGENTS: SubagentDefinition[] = [
   { name: "pi-sdd-writer", assetPath: "assets/agents/pi-sdd-writer.md", modelProfile: "coding" },
   { name: "pi-sdd-verifier", assetPath: "assets/agents/pi-sdd-verifier.md", modelProfile: "review" },
   { name: "pi-sdd-archivist", assetPath: "assets/agents/pi-sdd-archivist.md", modelProfile: "cheap" },
+  { name: "pi-sdd-bugfix-memory", assetPath: "assets/agents/pi-sdd-bugfix-memory.md", modelProfile: "cheap" },
 ];

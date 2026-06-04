@@ -9,6 +9,10 @@ metadata:
 
 # sdd-stack-bugfix-memory
 
+Parent-session rule:
+- Do not capture bugfix memory in parent window after routing.
+- Launch bugfix-memory as subagent first.
+
 Engram strict policy:
 
 - save only root cause, fix, evidence, references, conventions, setup notes, or handoffs
