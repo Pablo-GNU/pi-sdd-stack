@@ -14,15 +14,21 @@
 - not a fork or clone of another agent package
 - not an OpenSpec replacement
 - not a hidden autosave memory system or an Engram-backed parallel spec store
-- not full autonomous implementation orchestration in v0.1
+- not a black-box autonomous agent; it is an orchestrated SDD stack with explicit human checkpoints
 
 ## Installation
+
+### From npm
+
+```bash
+pi install npm:pi-sdd-stack
+```
+
+### From a local checkout
 
 ```bash
 pi install /absolute/path/to/pi-sdd-stack
 ```
-
-Or publish/install it as an npm Pi package later.
 
 ## Commands
 
