@@ -1,0 +1,12 @@
+version: 1
+policy:
+  referenceFirst: true
+  avoidBulkReads:
+    - openspec/specs/**/*.md
+    - openspec/changes/**/*.md
+    - src/**/*
+  priorities:
+    - active change artifacts
+    - affected domain specs
+    - shallow project profile
+    - targeted code entry points

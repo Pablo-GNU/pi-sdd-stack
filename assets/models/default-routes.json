@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "phases": {
+    "brownfield.onboard": { "agent": "pi-sdd-scout", "model": "inherit", "thinking": "low", "caveman-output": "micro" },
+    "greenfield.onboard": { "agent": "pi-sdd-product", "model": "inherit", "thinking": "high", "caveman-output": "off" },
+    "current-state.explore": { "agent": "pi-sdd-scout", "model": "inherit", "thinking": "medium", "caveman-output": "micro" },
+    "documentation.review": { "agent": "pi-sdd-scout", "model": "inherit", "thinking": "medium", "caveman-output": "lite" },
+    "prd": { "agent": "pi-sdd-product", "model": "inherit", "thinking": "high", "caveman-output": "off" },
+    "spec": { "agent": "pi-sdd-spec", "model": "inherit", "thinking": "high", "caveman-output": "off" },
+    "design": { "agent": "pi-sdd-design", "model": "inherit", "thinking": "high", "caveman-output": "off" },
+    "tasks": { "agent": "pi-sdd-tasker", "model": "inherit", "thinking": "high", "caveman-output": "lite" },
+    "apply": { "agent": "pi-sdd-writer", "model": "inherit", "thinking": "medium", "caveman-output": "lite" },
+    "verify": { "agent": "pi-sdd-verifier", "model": "inherit", "thinking": "high", "caveman-output": "lite" },
+    "archive": { "agent": "pi-sdd-archivist", "model": "inherit", "thinking": "low", "caveman-output": "micro" },
+    "bugfix.memory": { "agent": "pi-sdd-bugfix-memory", "model": "inherit", "thinking": "low", "caveman-output": "micro" }
+  }
+}

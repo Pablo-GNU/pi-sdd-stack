@@ -1,0 +1,53 @@
+{
+  "name": "pi-sdd-stack",
+  "version": "0.1.0",
+  "description": "PRD-first SDD stack for Pi Agent with OpenSpec and strict Engram memory policy.",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "sdd",
+    "openspec",
+    "engram"
+  ],
+  "main": "dist/src/extension.js",
+  "files": [
+    "dist",
+    "assets",
+    "skills",
+    "prompts",
+    "README.md"
+  ],
+  "pi": {
+    "extensions": [
+      "./dist/src/extension.js"
+    ],
+    "skills": [
+      "./skills"
+    ],
+    "prompts": [
+      "./prompts"
+    ]
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "typebox": "^1.1.38",
+    "yaml": "^2.5.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.78.0",
+    "@earendil-works/pi-tui": "^0.78.0",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.8.3",
+    "vitest": "^2.1.8"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*"
+  }
+}

@@ -1,0 +1,15 @@
+export const COMMAND_NAMES = {
+  DOCTOR: "sdd-stack:doctor",
+  BOOTSTRAP_CHECK: "sdd-stack:bootstrap-check",
+  MODELS: "sdd-stack:models",
+  TDD_MODE: "sdd-stack:tdd-mode",
+  STATUS: "sdd-stack:status",
+  CONTINUE: "sdd-stack:continue",
+  INIT: "sdd-stack:init",
+  PRD: "sdd-stack:prd",
+  PLAN: "sdd-stack:plan",
+  APPLY: "sdd-stack:apply",
+  VERIFY: "sdd-stack:verify",
+  ARCHIVE: "sdd-stack:archive",
+  MEMORY_SEARCH: "sdd-stack:memory-search",
+} as const;

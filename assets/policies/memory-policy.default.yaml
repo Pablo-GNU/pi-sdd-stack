@@ -1,0 +1,28 @@
+version: 1
+mode: strict
+
+allowedWriteCategories:
+  - bug_root_cause
+  - bug_fix
+  - architecture_decision
+  - technical_decision
+  - recurring_gotcha
+  - project_convention
+  - local_setup_note
+  - session_handoff
+
+forbiddenWriteCategories:
+  - prd
+  - proposal
+  - spec
+  - design
+  - tasks
+  - feature_requirements
+  - acceptance_criteria
+  - implementation_plan_as_source_of_truth
+
+rules:
+  - OpenSpec is the source of truth for product and technical specifications.
+  - Engram must never duplicate complete OpenSpec artifacts.
+  - Engram entries may reference OpenSpec paths but must not replace them.
+  - Bugfix memory must include root cause, fix, evidence, and relevant file paths.

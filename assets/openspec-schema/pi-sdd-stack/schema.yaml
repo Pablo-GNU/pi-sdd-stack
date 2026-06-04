@@ -1,0 +1,40 @@
+name: pi-sdd-stack
+version: 1
+description: PRD-first SDD workflow for Pi Agent using OpenSpec.
+
+artifacts:
+  - id: prd
+    generates: prd.md
+    description: Product Requirements Document
+    template: prd.md
+    requires: []
+
+  - id: proposal
+    generates: proposal.md
+    description: OpenSpec change proposal
+    template: proposal.md
+    requires: [prd]
+
+  - id: specs
+    generates: specs/**/*.md
+    description: Delta specs for affected domains
+    template: spec.md
+    requires: [proposal]
+
+  - id: design
+    generates: design.md
+    description: Technical design
+    template: design.md
+    requires: [proposal, specs]
+
+  - id: tasks
+    generates: tasks.md
+    description: Evidence-checkable implementation checklist
+    template: tasks.md
+    requires: [design, specs]
+
+  - id: verify
+    generates: verify.md
+    description: Verification report mapping requirements to evidence
+    template: verify.md
+    requires: [tasks]
