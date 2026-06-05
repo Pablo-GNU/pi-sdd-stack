@@ -146,6 +146,8 @@ describe("registerPiSddStack", () => {
 
     expect(result?.systemPrompt).toContain("Language rule: keep internal reasoning");
     expect(result?.systemPrompt).toContain("Reply to the user in the same language the conversation started in");
+    expect(result?.systemPrompt).toContain("Do not invent a scout->worker chain for AGENTS.md/README.md by default");
+    expect(result?.systemPrompt).toContain("Do not set outputSchema unless the step truly needs structured_output JSON");
     expect(result?.systemPrompt).toContain("the parent session must not execute that phase locally");
     expect(result?.systemPrompt).toContain("Parent session orchestrates; phase agents execute");
     expect(result?.systemPrompt).toContain("Brownfield onboarding is for repository operational/documentation onboarding");
@@ -216,6 +218,7 @@ describe("registerPiSddStack", () => {
     );
 
     expect(result.content[0]?.text).toContain("This is an SDD/OpenSpec flow");
+    expect((result.details as { phaseHint?: string }).phaseHint).toBe("openspec");
     expect(ctx.ui.select).not.toHaveBeenCalled();
   });
 
@@ -441,6 +444,19 @@ describe("registerPiSddStack", () => {
         "Quiero documentar este código ya que está incompleta la documentación",
       ),
     );
+    expect((result.details as { phaseHint?: string }).phaseHint).toBe("brownfield.onboard");
+  });
+
+  it("adds direct-delegation guardrails to AGENTS transform prompt", () => {
+    const prompt = buildDocumentationTransformPrompt(
+      "agents",
+      "Quiero documentar este código ya que está incompleta la documentación",
+    );
+
+    expect(prompt).toContain("Route AGENTS.md work through /sdd-stack:brownfield-onboard or an equivalent brownfield-onboarding delegation");
+    expect(prompt).toContain("Do not split AGENTS.md into an ad-hoc scout->worker chain");
+    expect(prompt).toContain("Do not invent a scout->worker chain for AGENTS.md/README.md by default");
+    expect(prompt).toContain("Do not set outputSchema unless the task truly needs structured_output JSON");
   });
 
   it("localizes the documentation question in english", async () => {
