@@ -23,18 +23,6 @@ function deepMerge(base: ModelRoutesConfig, override: Partial<ModelRoutesConfig>
   };
 }
 
-interface LegacyModelProfile {
-  provider: string;
-  model: string;
-  thinking: string;
-}
-
-interface LegacyPhaseRoute {
-  agent: string;
-  profile: string;
-  brevity: string;
-}
-
 interface DirectPhaseRouteWithLegacyKey {
   agent: string;
   model: string;
@@ -43,40 +31,17 @@ interface DirectPhaseRouteWithLegacyKey {
   "caveman-output"?: string;
 }
 
-interface LegacyModelRoutesConfig {
-  version?: number;
-  profiles?: Record<string, LegacyModelProfile>;
-  phases?: Record<string, LegacyPhaseRoute>;
-}
-
-function normalizeModelValue(profile?: LegacyModelProfile): string {
-  if (!profile || profile.model === "inherit") {
-    return "inherit";
-  }
-
-  if (profile.model.includes("/")) {
-    return profile.model;
-  }
-
-  if (profile.provider && profile.provider !== "inherit") {
-    return `${profile.provider}/${profile.model}`;
-  }
-
-  return profile.model;
-}
-
 function normalizeConfig(raw: unknown): ModelRoutesConfig {
   if (!raw || typeof raw !== "object") {
     return { version: 1, phases: {} };
   }
 
-  const candidate = raw as Partial<ModelRoutesConfig> & LegacyModelRoutesConfig;
+  const candidate = raw as Partial<ModelRoutesConfig>;
   const rawPhases = candidate.phases ?? {};
-  const hasDirectPhaseModel = Object.values(rawPhases).some((value) => typeof value === "object" && value !== null && "model" in value);
-
-  if (hasDirectPhaseModel) {
-    const normalizedPhases = Object.fromEntries(
-      Object.entries(rawPhases).map(([phase, route]) => {
+  const normalizedPhases = Object.fromEntries(
+    Object.entries(rawPhases)
+      .filter(([, route]) => typeof route === "object" && route !== null && "model" in route)
+      .map(([phase, route]) => {
         const directRoute = route as DirectPhaseRouteWithLegacyKey;
         return [phase, {
           agent: directRoute.agent,
@@ -85,25 +50,6 @@ function normalizeConfig(raw: unknown): ModelRoutesConfig {
           "caveman-output": directRoute["caveman-output"] ?? directRoute.brevity ?? "off",
         } satisfies PhaseRoute];
       }),
-    );
-    return {
-      version: candidate.version ?? 1,
-      phases: normalizedPhases,
-    };
-  }
-
-  const legacyProfiles = candidate.profiles ?? {};
-  const normalizedPhases = Object.fromEntries(
-    Object.entries(rawPhases).map(([phase, route]) => {
-      const legacyRoute = route as LegacyPhaseRoute;
-      const profile = legacyProfiles[legacyRoute.profile];
-      return [phase, {
-        agent: legacyRoute.agent,
-        model: normalizeModelValue(profile),
-        thinking: profile?.thinking ?? "inherit",
-        "caveman-output": legacyRoute.brevity,
-      } satisfies PhaseRoute];
-    }),
   );
 
   return {

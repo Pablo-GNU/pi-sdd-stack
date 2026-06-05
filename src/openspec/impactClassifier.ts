@@ -1,5 +1,6 @@
 import path from "node:path";
 import { listDir, pathExists, readText } from "../util/fs.js";
+import { readRequestedDomainsForChange } from "./requestedDomains.js";
 
 export const FEATURE_IMPACT_KIND = {
   NEW_DOMAIN: "new_domain",
@@ -38,10 +39,71 @@ export interface FeatureImpactClassification {
   notes: string[];
 }
 
-function headingMatches(content: string, keyword: string): string[] {
+const GENERIC_CHANGE_TOKENS = new Set([
+  "add",
+  "create",
+  "new",
+  "update",
+  "modify",
+  "change",
+  "remove",
+  "delete",
+  "fix",
+  "docs",
+  "documentation",
+  "sync",
+  "feature",
+  "flow",
+]);
+
+function normalizeToken(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9-]/g, "");
+}
+
+function singularizeToken(value: string): string {
+  if (value.endsWith("ies") && value.length > 3) {
+    return `${value.slice(0, -3)}y`;
+  }
+
+  if (value.endsWith("ses") && value.length > 3) {
+    return value.slice(0, -2);
+  }
+
+  if (value.endsWith("s") && !value.endsWith("ss") && value.length > 1) {
+    return value.slice(0, -1);
+  }
+
+  return value;
+}
+
+function tokenizeSummary(value: string): string[] {
+  return value
+    .split(/[^a-z0-9-]+/i)
+    .map((token) => normalizeToken(token))
+    .filter((token) => token.length > 1 && !GENERIC_CHANGE_TOKENS.has(token));
+}
+
+function buildTokenAliases(value: string): Set<string> {
+  const normalized = normalizeToken(value);
+  const singular = singularizeToken(normalized);
+  return new Set([normalized, singular, singular.endsWith("s") ? singular : `${singular}s`].filter((token) => token.length > 0));
+}
+
+function domainMatchesSummary(domain: string, summaryTokens: string[]): boolean {
+  const domainParts = domain.split("-").flatMap((part) => Array.from(buildTokenAliases(part)));
+  return domainParts.some((part) => summaryTokens.includes(part));
+}
+
+function headingMatches(content: string, keywords: string[]): string[] {
+  const strongKeywords = keywords.filter((keyword) => keyword.length >= 4);
+  if (strongKeywords.length === 0) {
+    return [];
+  }
+
   return content
     .split("\n")
-    .filter((line) => line.startsWith("### Requirement:") && line.toLowerCase().includes(keyword.toLowerCase()))
+    .filter((line) => line.startsWith("### Requirement:"))
+    .filter((line) => strongKeywords.some((keyword) => line.toLowerCase().includes(keyword.toLowerCase())))
     .map((line) => line.replace("### ", ""));
 }
 
@@ -52,8 +114,9 @@ export async function classifyFeatureImpact(options: {
   summary?: string;
 }): Promise<FeatureImpactClassification> {
   const specsRoot = path.join(options.repoRoot, "openspec", "specs");
-  const requestedDomains = options.requestedDomains ?? [];
+  const requestedDomains = options.requestedDomains ?? await readRequestedDomainsForChange(options.repoRoot, options.changeSlug);
   const summary = options.summary?.toLowerCase() ?? options.changeSlug.toLowerCase();
+  const summaryTokens = tokenizeSummary(summary);
   const domains = pathExists(specsRoot) ? await listDir(specsRoot) : [];
   const affectedDomains: string[] = [];
   const existingSpecPaths: string[] = [];
@@ -66,8 +129,8 @@ export async function classifyFeatureImpact(options: {
     if (!content) continue;
     const relativePath = path.relative(options.repoRoot, specPath);
     const isExplicit = requestedDomains.includes(domain);
-    const isReferenced = summary.includes(domain.replaceAll("-", " "));
-    const matches = headingMatches(content, options.changeSlug.split("-")[0] ?? "");
+    const isReferenced = domainMatchesSummary(domain, summaryTokens) || summary.includes(domain.replaceAll("-", " "));
+    const matches = headingMatches(content, summaryTokens.filter((token) => token !== domain && token !== singularizeToken(domain)));
 
     if (isExplicit || isReferenced || matches.length > 0) {
       affectedDomains.push(domain);
@@ -123,9 +186,22 @@ export async function classifyFeatureImpact(options: {
     notes: kind === FEATURE_IMPACT_KIND.CROSS_CUTTING_EXISTING_BEHAVIOR
       ? ["Feature appears to touch multiple existing domains."]
       : kind === FEATURE_IMPACT_KIND.MODIFIES_EXISTING_BEHAVIOR
-        ? ["Existing behavior should be captured under MODIFIED requirements."]
-        : kind === FEATURE_IMPACT_KIND.NEW_DOMAIN
-          ? ["Create a new domain delta spec within the active change."]
-          : [],
+        ? [
+            requestedDomains.length > 0 ? `requestedDomains=${requestedDomains.join(", ")} from prd.md takes priority over slug/summary heuristics.` : "",
+            "Existing behavior should be captured under MODIFIED requirements.",
+            "Use MODIFIED when the change alters the semantics, constraints, or scenarios of an already specified requirement.",
+          ].filter(Boolean)
+        : kind === FEATURE_IMPACT_KIND.NEW_REQUIREMENT_EXISTING_DOMAIN
+          ? [
+              requestedDomains.length > 0 ? `requestedDomains=${requestedDomains.join(", ")} from prd.md takes priority over slug/summary heuristics.` : "",
+              "Follow-up change extends an existing domain. Reuse the existing domain delta spec path inside the active change.",
+              "Use ADDED when the capability is net-new inside an existing domain. Use MODIFIED only when changing an existing requirement's semantics, constraints, or scenarios.",
+            ].filter(Boolean)
+          : kind === FEATURE_IMPACT_KIND.NEW_DOMAIN
+            ? [
+                requestedDomains.length > 0 ? `requestedDomains=${requestedDomains.join(", ")} from prd.md takes priority over slug/summary heuristics.` : "",
+                "Create a new domain delta spec within the active change.",
+              ].filter(Boolean)
+            : [],
   };
 }

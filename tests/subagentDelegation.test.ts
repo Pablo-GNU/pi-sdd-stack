@@ -19,7 +19,7 @@ describe("subagent phase delegation", () => {
     const spec = await readText(path.join(repoRoot, ".pi", "agents", "pi-sdd-stack", "pi-sdd-spec.md"));
     const scout = await readText(path.join(repoRoot, ".pi", "agents", "pi-sdd-stack", "pi-sdd-scout.md"));
     expect(spec).toContain("## OpenSpec Updates");
-    expect(scout).toContain("maxExecutionTimeMs: 300000");
+    expect(scout).toContain("maxExecutionTimeMs: 900000");
   });
 
   it("builds a delegated prd run command", async () => {
@@ -41,10 +41,14 @@ describe("subagent phase delegation", () => {
     expect(brownfield).toContain("/run pi-sdd-scout");
     expect(brownfield).toContain("sdd-stack-brownfield-onboard");
     expect(brownfield).toContain("caveman-output=micro");
+    expect(brownfield).toContain("progress");
+    expect(brownfield).toContain("--bg");
     expect(explore).toContain("/parallel");
     expect(explore).toContain("current-state-context.md");
     expect(explore).toContain("current-state-impact.md");
     expect(explore).toContain("caveman-output=micro");
+    expect(explore).toContain("progress");
+    expect(explore).toContain("--bg");
     expect(bugfix).toContain("/run pi-sdd-bugfix-memory");
     expect(bugfix).toContain("sdd-stack-bugfix-memory");
     expect(bugfix).toContain("caveman-output=micro");
@@ -67,5 +71,14 @@ describe("subagent phase delegation", () => {
     expect(tasks).toContain("sdd-stack-prd-to-sdd");
     expect(tasks).toContain("caveman-output=lite");
     expect(spec).not.toContain("/chain");
+  });
+
+  it("builds delegated documentation review in background with progress", async () => {
+    const repoRoot = await createTempDir("delegated-docs");
+    const docs = await buildPhaseSubagentCommand(repoRoot, "add-dark-mode", PHASE_NAMES.DOCUMENTATION_REVIEW, import.meta.url);
+
+    expect(docs).toContain("/run pi-sdd-scout");
+    expect(docs).toContain("progress");
+    expect(docs).toContain("--bg");
   });
 });

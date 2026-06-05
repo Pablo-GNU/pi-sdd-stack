@@ -46,9 +46,9 @@ function formatPhaseLine(phaseName: string, route: PhaseRoute): string {
 
 function renderEditor(config: ModelRoutesConfig, phaseNames: string[], selectedIndex: number): string[] {
   return [
-    "pi-sdd-stack model editor",
+    "pi-sdd-stack phase routing editor",
     "",
-    "Per-phase routing (one model + one thinking level per phase)",
+    "Per-phase routing (agent + provider/model + thinking + caveman-output)",
     "",
     ...phaseNames.map((phaseName, index) => {
       const prefix = index === selectedIndex ? ">" : " ";
@@ -73,9 +73,9 @@ export async function runModels(cwd: string): Promise<string> {
   const router = await ModelRouter.create(import.meta.url, cwd);
   const config = router.getConfig();
 
-  const lines: string[] = ["pi-sdd-stack model routes", "", "phases:"];
+  const lines: string[] = ["pi-sdd-stack phase routing", "", "phases:"];
   for (const [phase, route] of Object.entries(config.phases)) {
-    lines.push(`- ${phase}: model=${route.model}, thinking=${route.thinking}, caveman-output=${route["caveman-output"]}`);
+    lines.push(`- ${phase}: agent=${route.agent}, model=${route.model}, thinking=${route.thinking}, caveman-output=${route["caveman-output"]}`);
   }
 
   return lines.join("\n");
@@ -86,7 +86,7 @@ export async function openModelsEditor(ctx: ExtensionCommandContext): Promise<st
   const config = cloneConfig(router.getConfig());
   const phaseNames = Object.keys(config.phases);
   if (phaseNames.length === 0) {
-    return "Model editor could not load phase defaults. Re-run /sdd-stack:init or verify that model assets are installed.";
+    return "Phase routing editor could not load phase defaults. Re-run /sdd-stack:init or verify that model assets are installed.";
   }
 
   const availableModels = await getAvailableModels(ctx);
@@ -149,12 +149,12 @@ export async function openModelsEditor(ctx: ExtensionCommandContext): Promise<st
     });
 
     if (action.kind === ACTIONS.CANCEL) {
-      return dirty ? "Model editor closed without saving changes." : "Model editor closed.";
+      return dirty ? "Phase routing editor closed without saving changes." : "Phase routing editor closed.";
     }
 
     if (action.kind === ACTIONS.SAVE) {
       const targetPath = await saveModelOverrides(ctx.cwd, config);
-      return `Saved model overrides to ${path.relative(ctx.cwd, targetPath)}`;
+      return `Saved phase routing overrides to ${path.relative(ctx.cwd, targetPath)}`;
     }
 
     if (!action.phaseName) {

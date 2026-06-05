@@ -16,7 +16,7 @@
   - `openspec/` — schema install, impact classification, path helpers
   - `context/` — reference-first context resolution
   - `memory/` — explicit memory policy and Engram wrapper
-  - `models/` — phase model routing
+  - `models/` — phase routing config + loader
   - `subagents/` — subagent registry and guided runner helpers
   - `brevity/` — caveman-output / brevity behavior
   - `sdd/` — phase graph and orchestration logic
@@ -52,11 +52,12 @@
 - If command behavior changes, ensure `tests/extension.test.ts` still covers registration and routing expectations.
 - If generation logic changes, update the relevant tests under `tests/agentsFile.test.ts`, `tests/schemaInstaller.test.ts`, or orchestration tests.
 
-## Model routing
+## Phase routing
 
 - Default phase routing lives in `assets/models/default-routes.json`.
-- User-level model routing is written to `~/.pi/sdd-stack/models.json`.
-- `/sdd-stack:models` is the intended control surface for per-phase `model`, `thinking`, and `caveman-output`.
+- User-level phase routing is written to `~/.pi/sdd-stack/models.json`.
+- `/sdd-stack:models` is the intended control surface for per-phase `agent`, `model`, `thinking`, and `caveman-output`.
+- Command name + file path keep `models` for compatibility.
 
 ## OpenSpec and orchestration
 

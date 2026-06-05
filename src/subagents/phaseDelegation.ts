@@ -201,7 +201,9 @@ function specTask(slug: string, repoRoot: string): string {
     `Create or update ${path.relative(repoRoot, paths.proposal)}.`,
     `Create or update delta specs under ${path.relative(repoRoot, paths.specsDir)}/**/spec.md.`,
     "Classify impact before writing.",
+    "Read requestedDomains from prd.md frontmatter when present. Prioritize it over slug/summary heuristics for domain selection.",
     "Use ADDED, MODIFIED, REMOVED only inside active change.",
+    "If the change extends an existing domain with net-new capability, reuse that domain and write ADDED. Use MODIFIED only when changing an existing requirement's semantics, constraints, or scenarios.",
     "Keep OpenSpec source-of-truth.",
   ].join("\n");
 }
@@ -267,9 +269,10 @@ export async function buildPhaseSubagentCommand(repoRoot: string, slug: string, 
     const agent = agentForPhase(PHASE_NAMES.BROWNFIELD_ONBOARD, router);
     return `/run ${agent.name}${buildInlineConfig({
       skills: ["sdd-stack-brownfield-onboard"],
+      progress: true,
       ...(agent.model ? { model: agent.model } : {}),
       ...(agent.brevity ? { brevity: agent.brevity } : {}),
-    })} ${quote(brownfieldOnboardTask(slug, repoRoot))}`;
+    })} ${quote(brownfieldOnboardTask(slug, repoRoot))} --bg`;
   }
 
   if (phase === PHASE_NAMES.GREENFIELD_ONBOARD) {
@@ -286,6 +289,7 @@ export async function buildPhaseSubagentCommand(repoRoot: string, slug: string, 
     const agent = agentForPhase(PHASE_NAMES.CURRENT_STATE_EXPLORE, router);
     const inline = buildInlineConfig({
       reads,
+      progress: true,
       ...(agent.model ? { model: agent.model } : {}),
       ...(agent.brevity ? { brevity: agent.brevity } : {}),
     });
@@ -294,6 +298,7 @@ export async function buildPhaseSubagentCommand(repoRoot: string, slug: string, 
       `${agent.name}${inline} ${quote(currentStateExploreContextTask(slug, repoRoot))}`,
       "->",
       `${agent.name}${inline} ${quote(currentStateExploreImpactTask(slug, repoRoot))}`,
+      "--bg",
     ].join(" ");
   }
 
@@ -302,9 +307,10 @@ export async function buildPhaseSubagentCommand(repoRoot: string, slug: string, 
     const agent = agentForPhase(PHASE_NAMES.DOCUMENTATION_REVIEW, router);
     return `/run ${agent.name}${buildInlineConfig({
       reads,
+      progress: true,
       ...(agent.model ? { model: agent.model } : {}),
       ...(agent.brevity ? { brevity: agent.brevity } : {}),
-    })} ${quote(documentationReviewTask(slug, repoRoot))}`;
+    })} ${quote(documentationReviewTask(slug, repoRoot))} --bg`;
   }
 
   if (phase === PHASE_NAMES.PRD) {

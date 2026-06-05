@@ -1,3 +1,10 @@
+---
+requestedDomains: []
+# Example:
+# requestedDomains:
+#   - client
+---
+
 # PRD: {{title}}
 
 ## Problem

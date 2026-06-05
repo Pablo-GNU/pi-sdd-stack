@@ -9,6 +9,7 @@ import { chooseTddMode, ensureTddModeChosen, runTddMode } from "./commands/tddMo
 import { runStatus } from "./commands/status.js";
 import { runInit } from "./commands/init.js";
 import { runMemorySearch } from "./commands/memorySearch.js";
+import { runRequestedDomains } from "./commands/requestedDomains.js";
 import { completeChangeSlug, completeInitArgs } from "./commands/completions.js";
 import { buildPhaseSubagentCommand, ensureManagedSubagents } from "./subagents/phaseDelegation.js";
 import {
@@ -24,6 +25,7 @@ import { findDelegationByLabel, markDelegationFailed, markDelegationReturned, ma
 import { buildPhaseReturnDigest } from "./sdd/phaseDigest.js";
 import { pathExists } from "./util/fs.js";
 import path from "node:path";
+import { prepareOpenSpecArtifacts } from "./openspec/changeScaffolding.js";
 
 function notify(ctx: ExtensionCommandContext, message: string, level: "info" | "warning" | "error" = "info"): void {
   if (ctx.hasUI) {
@@ -85,6 +87,10 @@ function getRuntimeSessionRef(ctx: ExtensionCommandContext): RuntimeSessionRef {
   };
 }
 
+function isBackgroundDelegationCommand(command: string): boolean {
+  return /(?:^|\s)--bg\s*$/.test(command);
+}
+
 async function runDelegatedPhaseCommand(
   pi: ExtensionAPI,
   ctx: ExtensionCommandContext,
@@ -99,6 +105,9 @@ async function runDelegatedPhaseCommand(
   }
 
   await ensureManagedSubagents(ctx.cwd, import.meta.url);
+  if (!options?.commandOverride) {
+    await prepareOpenSpecArtifacts(ctx.cwd, slug, phase);
+  }
   const command = options?.commandOverride ?? await buildPhaseSubagentCommand(ctx.cwd, slug, phase, import.meta.url);
   const active = await markDelegationRunning(ctx.cwd, { session, slug, phase, command, ...(options?.labelOverride ? { label: options.labelOverride } : {}) });
 
@@ -106,6 +115,16 @@ async function runDelegatedPhaseCommand(
 
   try {
     pi.sendUserMessage(command);
+    if (isBackgroundDelegationCommand(command)) {
+      await markDelegationReturned(ctx.cwd, "Subagent launched in background. Track progress with subagent status tooling or the async run UI.", session);
+      notify(ctx, `Detached SDD subagent ${active.label} · phase=${phase} · slug=${slug}`);
+      return [
+        `delegated label=${active.label}`,
+        `phase=${phase}`,
+        `command=${command}`,
+        "status=detached",
+      ].join("\n");
+    }
     await ctx.waitForIdle();
     await markDelegationReturned(ctx.cwd, "Subagent returned control to orchestrator.", session);
     notify(ctx, `Returned SDD subagent ${active.label} · phase=${phase} · slug=${slug}`);
@@ -288,7 +307,7 @@ export default function registerPiSddStack(pi: ExtensionAPI): void {
   });
 
   pi.registerCommand(COMMAND_NAMES.MODELS, {
-    description: "Show effective model profiles and phase routes for pi-sdd-stack",
+    description: "Show effective per-phase routing for pi-sdd-stack",
     handler: async (_args, ctx) => {
       if (!ctx.hasUI) {
         await runCommand(ctx, async () => runModels(ctx.cwd));
@@ -364,6 +383,17 @@ export default function registerPiSddStack(pi: ExtensionAPI): void {
     description: "Create or update a PRD for a change slug",
     getArgumentCompletions: async (prefix, ) => completeChangeSlug(process.cwd(), prefix, "Existing OpenSpec change slug."),
     handler: async (args, ctx) => runProtectedSddCommand(ctx, async () => runDelegatedPhaseCommand(pi, ctx, PHASE_NAMES.PRD, requireArgument(args, "/sdd-stack:prd <slug>", "change slug"))),
+  });
+
+  pi.registerCommand(COMMAND_NAMES.REQUESTED_DOMAINS, {
+    description: "Read or update requestedDomains in openspec/changes/<slug>/prd.md",
+    getArgumentCompletions: async (prefix) => {
+      if (prefix.trim().includes(" ")) {
+        return null;
+      }
+      return completeChangeSlug(process.cwd(), prefix, "Existing OpenSpec change slug.");
+    },
+    handler: async (args, ctx) => runProtectedCommand(ctx, async () => runRequestedDomains(ctx.cwd, args)),
   });
 
   pi.registerCommand(COMMAND_NAMES.PLAN, {
