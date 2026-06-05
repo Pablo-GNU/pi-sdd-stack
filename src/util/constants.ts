@@ -11,6 +11,7 @@ export const COMMAND_NAMES = {
   DOCUMENTATION_REVIEW: "sdd-stack:documentation-review",
   INIT: "sdd-stack:init",
   PRD: "sdd-stack:prd",
+  REQUESTED_DOMAINS: "sdd-stack:requested-domains",
   PLAN: "sdd-stack:plan",
   SPEC: "sdd-stack:spec",
   DESIGN: "sdd-stack:design",

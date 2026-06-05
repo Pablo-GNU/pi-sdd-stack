@@ -1,5 +1,7 @@
 # pi-sdd-stack
 
+![pi-sdd-stack logo](./logo.png)
+
 `pi-sdd-stack` is a PRD-first SDD package for Pi Agent. It initializes a repo safely, keeps OpenSpec as the specification source of truth, and treats memory as an explicitly controlled optional layer.
 
 ## What it is
@@ -34,12 +36,13 @@ pi install /absolute/path/to/pi-sdd-stack
 
 - `/sdd-stack:doctor`
 - `/sdd-stack:bootstrap-check`
-- `/sdd-stack:models`
+- `/sdd-stack:models` — phase routing editor/inspector
 - `/sdd-stack:tdd-mode`
 - `/sdd-stack:status <slug>`
 - `/sdd-stack:continue <slug>`
 - `/sdd-stack:init`
 - `/sdd-stack:prd <slug>`
+- `/sdd-stack:requested-domains <slug> [domain1,domain2,...|--clear]`
 - `/sdd-stack:plan <slug>`
 - `/sdd-stack:apply <slug>`
 - `/sdd-stack:verify <slug>`
@@ -57,6 +60,10 @@ If `AGENTS.md` already exists, `pi-sdd-stack` leaves it alone and writes `.pi/sd
 - OpenSpec is the source of truth for PRDs, proposals, spec deltas, designs, tasks, and verification reports.
 - Active feature work writes under `openspec/changes/<slug>/...`.
 - Source specs under `openspec/specs/` are not edited directly during an active change.
+- Follow-up changes on an existing domain should reuse that domain inside the active change delta spec path instead of inventing a parallel domain.
+- Use `ADDED` when a follow-up change adds net-new capability inside an existing domain. Use `MODIFIED` only when changing an already specified requirement's semantics, constraints, or scenarios.
+- `openspec/changes/<slug>/prd.md` may declare explicit domain targeting in frontmatter with `requestedDomains`, for example `requestedDomains: [client]`. When present, it takes priority over slug/summary heuristics for impact classification and change scaffolding.
+- Use `/sdd-stack:requested-domains <slug>` to inspect the current value, `/sdd-stack:requested-domains <slug> client,auth` to set it, and `/sdd-stack:requested-domains <slug> --clear` to reset it to an empty list without editing the PRD manually.
 - Archive is responsible for merging the approved change back to source-of-truth specs.
 - OpenSpec navigation should rely on its directory conventions and CLI (`openspec list/show/status`), not on a package-owned index file.
 
@@ -92,7 +99,7 @@ Use `/sdd-stack:bootstrap-check` before starting a project to see the full prefl
 
 ## Model routing
 
-Use `/sdd-stack:models` to open a TUI editor for per-phase model routing.
+Use `/sdd-stack:models` to open a TUI editor for per-phase routing. Command name stays `models` for compatibility.
 
 Current routing surfaces are organized into three groups:
 
@@ -100,9 +107,10 @@ Current routing surfaces are organized into three groups:
 - Reusable exploration/review: `current-state.explore`, `documentation.review`
 - Main SDD flow: `prd`, `spec`, `design`, `tasks`, `apply`, `verify`, `archive`, `bugfix.memory`
 
-Each phase can carry three runtime controls:
+Each phase can carry four routing/runtime controls:
 
-- `model` — the Pi model to use for that phase
+- `agent` — the delegated phase agent for that phase
+- `model` — the Pi provider/model to use for that phase
 - `thinking` — the reasoning effort level for that phase
 - `caveman-output` — the output compression/style level for that phase when Caveman is installed
 
@@ -124,14 +132,15 @@ Onboarding/documentation phases (`brownfield.onboard`, `greenfield.onboard`) sta
 
 Use `/sdd-stack:status <slug>` to inspect the current graph state for a change, and `/sdd-stack:continue <slug>` to run the next ready orchestrated step.
 
-- Each SDD phase gets its own `model` and `thinking` value.
+- Each SDD phase gets its own `agent`, `model`, `thinking`, and `caveman-output` value.
 - Models are selected from the list Pi already knows.
 - Thinking can be set only when the selected model supports reasoning.
 - Changes are saved to `~/.pi/sdd-stack/models.json`.
+- The file stores per-phase routing overrides; path name stays `models.json` for compatibility.
 
 ## Optional output controls
 
-If you install `pi-caveman`, `/sdd-stack:models` also lets you configure `caveman-output` per phase.
+If you install `pi-caveman`, `/sdd-stack:models` also applies and lets you configure `caveman-output` per phase.
 
 Install:
 

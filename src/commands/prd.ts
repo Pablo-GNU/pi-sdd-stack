@@ -1,19 +1,18 @@
 import path from "node:path";
 import { getChangePaths } from "../openspec/changePaths.js";
-import { readText, writeText } from "../util/fs.js";
-import { resolvePackageRoot } from "../util/runtimePaths.js";
-
-function renderTemplate(template: string, slug: string): string {
-  const title = slug.replaceAll("-", " ").replace(/\b\w/g, (value) => value.toUpperCase());
-  return template.replaceAll("{{title}}", title).replaceAll("{{slug}}", slug);
-}
+import { prepareOpenSpecArtifacts } from "../openspec/changeScaffolding.js";
+import { readRequestedDomainsForChange } from "../openspec/requestedDomains.js";
+import { PHASE_NAMES } from "../models/phaseRoutes.js";
 
 export async function runPrd(cwd: string, slug: string): Promise<string> {
-  const packageRoot = resolvePackageRoot(import.meta.url);
-  const templatePath = path.join(packageRoot, "assets", "openspec-schema", "pi-sdd-stack", "templates", "prd.md");
-  const template = await readText(templatePath);
-  if (!template) throw new Error("PRD template is missing.");
+  await prepareOpenSpecArtifacts(cwd, slug, PHASE_NAMES.PRD);
   const paths = getChangePaths(cwd, slug);
-  await writeText(paths.prd, renderTemplate(template, slug));
-  return path.relative(cwd, paths.prd);
+  const requestedDomains = await readRequestedDomainsForChange(cwd, slug);
+
+  return [
+    path.relative(cwd, paths.prd),
+    requestedDomains.length > 0
+      ? `requestedDomains=${requestedDomains.join(", ")}`
+      : `hint: if domain selection is ambiguous, set /sdd-stack:requested-domains ${slug} domain1,domain2`,
+  ].join("\n");
 }

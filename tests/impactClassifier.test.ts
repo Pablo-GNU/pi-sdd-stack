@@ -23,6 +23,32 @@ describe("classifyFeatureImpact", () => {
     expect(result.affectedDomains).toContain("teams");
   });
 
+  it("reuses existing domain for follow-up entity extensions", async () => {
+    const repoRoot = await createTempDir("impact-follow-up-domain");
+    await ensureFile(path.join(repoRoot, "openspec/specs/client/spec.md"), "# client\n\n### Requirement: Client Creation\nClients can be created.\n");
+
+    const result = await classifyFeatureImpact({ repoRoot, changeSlug: "add-client-profile-photo", summary: "add client profile photo" });
+
+    expect(result.kind).toBe(FEATURE_IMPACT_KIND.NEW_REQUIREMENT_EXISTING_DOMAIN);
+    expect(result.affectedDomains).toEqual(["client"]);
+    expect(result.newDomainsNeeded).toEqual([]);
+    expect(result.notes).toContain("Follow-up change extends an existing domain. Reuse the existing domain delta spec path inside the active change.");
+    expect(result.notes).toContain("Use ADDED when the capability is net-new inside an existing domain. Use MODIFIED only when changing an existing requirement's semantics, constraints, or scenarios.");
+  });
+
+  it("prioritizes requestedDomains from prd frontmatter over ambiguous slug heuristics", async () => {
+    const repoRoot = await createTempDir("impact-requested-domains-frontmatter");
+    await ensureFile(path.join(repoRoot, "openspec/specs/client/spec.md"), "# client\n\n### Requirement: Client Creation\nClients can be created.\n");
+    await ensureFile(path.join(repoRoot, "openspec/changes/attach-avatar/prd.md"), "---\nrequestedDomains:\n  - client\n---\n\n# PRD: Attach Avatar\n");
+
+    const result = await classifyFeatureImpact({ repoRoot, changeSlug: "attach-avatar", summary: "attach avatar to a record" });
+
+    expect(result.kind).toBe(FEATURE_IMPACT_KIND.NEW_REQUIREMENT_EXISTING_DOMAIN);
+    expect(result.affectedDomains).toEqual(["client"]);
+    expect(result.newDomainsNeeded).toEqual([]);
+    expect(result.notes).toContain("requestedDomains=client from prd.md takes priority over slug/summary heuristics.");
+  });
+
   it("classifies existing requirement modification", async () => {
     const repoRoot = await createTempDir("impact-modify");
     await ensureFile(path.join(repoRoot, "openspec/specs/auth/spec.md"), "# auth\n\n### Requirement: auth login\n");

@@ -9,6 +9,7 @@ import {
   buildDocumentationTransformPrompt,
   getDocumentationPromptPack,
 } from "../src/documentation/routing.js";
+import { readText } from "../src/util/fs.js";
 
 vi.mock("../src/util/requirements.js", () => ({
   assertRequirements: vi.fn().mockResolvedValue(undefined),
@@ -117,11 +118,18 @@ describe("registerPiSddStack", () => {
     expect(harness.commands.has(COMMAND_NAMES.BOOTSTRAP_CHECK)).toBe(true);
   });
 
-  it("registers models command", async () => {
+  it("registers phase routing command", async () => {
     const harness = createExtensionHarness();
     registerPiSddStack(harness.api);
 
     expect(harness.commands.has(COMMAND_NAMES.MODELS)).toBe(true);
+  });
+
+  it("registers requestedDomains helper command", async () => {
+    const harness = createExtensionHarness();
+    registerPiSddStack(harness.api);
+
+    expect(harness.commands.has(COMMAND_NAMES.REQUESTED_DOMAINS)).toBe(true);
   });
 
   it("injects explicit free-form SDD delegation rule", async () => {
@@ -211,6 +219,23 @@ describe("registerPiSddStack", () => {
     expect(ctx.ui.select).not.toHaveBeenCalled();
   });
 
+  it("prepares OpenSpec scaffold before delegated spec phase", async () => {
+    const repoRoot = await createTempDir("extension-spec-scaffold");
+    await ensureFile(path.join(repoRoot, "openspec", "changes", "add-dark-mode", "prd.md"), "# PRD\n");
+
+    const harness = createExtensionHarness();
+    registerPiSddStack(harness.api);
+    const command = harness.commands.get(COMMAND_NAMES.SPEC);
+    const ctx = createCommandContext({ cwd: repoRoot });
+
+    await command?.handler("add-dark-mode", ctx);
+
+    expect(await readText(path.join(repoRoot, "openspec", "changes", "add-dark-mode", "proposal.md"))).toContain("# Proposal: Add Dark Mode");
+    expect(await readText(path.join(repoRoot, "openspec", "changes", "add-dark-mode", "specs", "add", "spec.md"))).toContain("# add Specification Delta");
+    expect(harness.api.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("openspec/changes/add-dark-mode/proposal.md"));
+    expect(harness.api.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining("openspec/changes/add-dark-mode/specs/add/spec.md"));
+  });
+
   it("registers subagent-only phase commands", async () => {
     const harness = createExtensionHarness();
     registerPiSddStack(harness.api);
@@ -278,6 +303,26 @@ describe("registerPiSddStack", () => {
     expect(harness.api.sendUserMessage).toHaveBeenCalledWith('/run pi-sdd-product "task"');
   });
 
+  it("does not wait for idle after launching background scout delegation", async () => {
+    const repoRoot = await createTempDir("extension-bg-delegation");
+    await ensureFile(path.join(repoRoot, "openspec", "changes", "add-dark-mode", ".gitkeep"), "");
+
+    const harness = createExtensionHarness();
+    registerPiSddStack(harness.api);
+    const command = harness.commands.get(COMMAND_NAMES.BROWNFIELD_ONBOARD);
+    const waitForIdle = vi.fn().mockResolvedValue(undefined);
+    const ctx = createCommandContext({ cwd: repoRoot, waitForIdle });
+
+    await command?.handler("add-dark-mode", ctx);
+
+    expect(harness.api.sendUserMessage).toHaveBeenCalledWith(expect.stringContaining(" --bg"));
+    expect(waitForIdle).not.toHaveBeenCalled();
+    expect(ctx.ui.notify).toHaveBeenCalledWith(
+      expect.stringContaining("Detached SDD subagent"),
+      "info",
+    );
+  });
+
   it("shows a friendly error when a query is missing", async () => {
     const harness = createExtensionHarness();
     registerPiSddStack(harness.api);
@@ -341,6 +386,31 @@ describe("registerPiSddStack", () => {
         description: "Existing OpenSpec change slug.",
       },
     ]);
+  });
+
+  it("reads and updates requestedDomains through the helper command", async () => {
+    const repoRoot = await createTempDir("extension-requested-domains");
+    const harness = createExtensionHarness();
+    registerPiSddStack(harness.api);
+    const command = harness.commands.get(COMMAND_NAMES.REQUESTED_DOMAINS);
+    const ctx = createCommandContext({ cwd: repoRoot });
+
+    await command?.handler("attach-avatar client,auth", ctx);
+
+    expect(await readText(path.join(repoRoot, "openspec", "changes", "attach-avatar", "prd.md"))).toContain("requestedDomains:");
+    expect(await readText(path.join(repoRoot, "openspec", "changes", "attach-avatar", "prd.md"))).toContain("- client");
+    expect(await readText(path.join(repoRoot, "openspec", "changes", "attach-avatar", "prd.md"))).toContain("- auth");
+    expect(ctx.ui.notify).toHaveBeenCalledWith(
+      expect.stringContaining("requestedDomains=client, auth"),
+      "info",
+    );
+
+    await command?.handler("attach-avatar", ctx);
+
+    expect(ctx.ui.notify).toHaveBeenCalledWith(
+      expect.stringContaining("usage= /sdd-stack:requested-domains attach-avatar domain1,domain2 or /sdd-stack:requested-domains attach-avatar --clear"),
+      "info",
+    );
   });
 
   it("registers documentation clarification tool and recommends AGENTS first", async () => {

@@ -1,6 +1,7 @@
 import path from "node:path";
 import { pathExists } from "../util/fs.js";
 import { getChangePaths } from "../openspec/changePaths.js";
+import { readRequestedDomainsForChange } from "../openspec/requestedDomains.js";
 import { PHASE_NAMES, type PhaseName } from "../models/phaseRoutes.js";
 import { getPhaseNode, listPhaseGraph, type PhaseNode } from "./phaseGraph.js";
 import { readVerifyStatus, VERIFY_STATUSES } from "./verifyStatus.js";
@@ -130,6 +131,7 @@ export async function formatPhaseStatusesAsync(repoRoot: string, slug: string, s
   const statuses = getPhaseStatuses(repoRoot, slug);
   const runtime = await readRuntimeState(repoRoot, session);
   const bugfixDone = await bugfixMemoryArtifactExists(repoRoot, slug);
+  const requestedDomains = await readRequestedDomainsForChange(repoRoot, slug);
   const lines = [`pi-sdd-stack phase status for ${slug}`, "", "phases:"];
 
   for (const status of statuses) {
@@ -162,6 +164,14 @@ export async function formatPhaseStatusesAsync(repoRoot: string, slug: string, s
   const next = await getNextRecommendedPhaseAsync(repoRoot, slug);
   if (next) {
     lines.push("", `next: ${next.phase}`);
+  }
+
+  lines.push(
+    "",
+    `requestedDomains: ${requestedDomains.length > 0 ? requestedDomains.join(", ") : "(heuristic)"}`,
+  );
+  if (requestedDomains.length === 0) {
+    lines.push(`hint: use /sdd-stack:requested-domains ${slug} domain1,domain2 if the domain is ambiguous.`);
   }
 
   return lines.join("\n");
