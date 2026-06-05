@@ -1,6 +1,6 @@
 # pi-sdd-stack
 
-![pi-sdd-stack logo](./logo.png)
+![pi-sdd-stack logo](https://raw.githubusercontent.com/Pablo-GNU/pi-sdd-stack/master/logo.png)
 
 `pi-sdd-stack` is a PRD-first SDD package for Pi Agent. It initializes a repo safely, keeps OpenSpec as the specification source of truth, and treats memory as an explicitly controlled optional layer.
 
