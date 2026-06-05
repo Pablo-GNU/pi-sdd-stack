@@ -1,6 +1,6 @@
 {
   "name": "pi-sdd-stack",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "PRD-first SDD stack for Pi Agent with OpenSpec and strict Engram memory policy.",
   "license": "MIT",
   "type": "module",

@@ -27,6 +27,7 @@ export interface DocumentationChoiceMetadata {
   choice: DocumentationChoice;
   label: string;
   instruction: string;
+  phaseHint?: string;
 }
 
 export function detectDocumentationLocale(text: string): DocumentationLocale {
@@ -94,6 +95,7 @@ export function getDocumentationChoiceMetadata(locale: DocumentationLocale): Doc
       instruction: locale === DOCUMENTATION_LOCALES.EN
         ? "Prioritize AGENTS.md first for operational project context."
         : "Prioriza AGENTS.md primero para el contexto operativo del proyecto.",
+      phaseHint: "brownfield.onboard",
     },
     {
       choice: DOCUMENTATION_CHOICES.README,
@@ -133,20 +135,23 @@ export function getDocumentationChoiceMetadata(locale: DocumentationLocale): Doc
   ];
 }
 
+const DIRECT_DELEGATION_NOTE = "Delegate substantial repository-documentation work through one focused subagent or the matching sdd-stack phase command. Do not invent a scout->worker chain for AGENTS.md/README.md by default. Do not set outputSchema unless the task truly needs structured_output JSON.";
+const AGENTS_DELEGATION_NOTE = "Route AGENTS.md work through /sdd-stack:brownfield-onboard or an equivalent brownfield-onboarding delegation: one focused scouting/documentation pass responsible for both shallow repo analysis and AGENTS.md output. Do not split AGENTS.md into an ad-hoc scout->worker chain.";
+
 export function buildDocumentationTransformPrompt(choice: DocumentationChoice, originalPrompt: string, customRequest?: string): string {
   switch (choice) {
     case DOCUMENTATION_CHOICES.AGENTS:
-      return `The user asked: "${originalPrompt}". Prioritize operational project context. Analyze the repository shallowly and create or improve AGENTS.md first. Focus on stack, repository layout, services/packages, common commands, testing expectations, constraints, and a brief reference to openspec/specs and openspec/changes if OpenSpec exists. Do not default to writing README.md.`;
+      return `The user asked: "${originalPrompt}". Prioritize operational project context. Analyze the repository shallowly and create or improve AGENTS.md first. Focus on stack, repository layout, services/packages, common commands, testing expectations, constraints, and a brief reference to openspec/specs and openspec/changes if OpenSpec exists. Do not default to writing README.md. ${AGENTS_DELEGATION_NOTE} ${DIRECT_DELEGATION_NOTE}`;
     case DOCUMENTATION_CHOICES.README:
-      return `The user asked: "${originalPrompt}". Create or improve a human-facing README.md first. Focus on repository overview, setup, how to run the project, and onboarding basics. Do not use README as a substitute for AGENTS.md or OpenSpec.`;
+      return `The user asked: "${originalPrompt}". Create or improve a human-facing README.md first. Focus on repository overview, setup, how to run the project, and onboarding basics. Do not use README as a substitute for AGENTS.md or OpenSpec. ${DIRECT_DELEGATION_NOTE}`;
     case DOCUMENTATION_CHOICES.OPENSPEC:
       return `The user asked: "${originalPrompt}". Focus first on the OpenSpec surface. Inspect openspec/specs and openspec/changes, identify gaps in source-of-truth behavior documentation, and improve specifications there instead of writing a general README.`;
     case DOCUMENTATION_CHOICES.TECHNICAL_DOCS:
-      return `The user asked: "${originalPrompt}". Focus on technical documentation first: modules, endpoints, services, architecture, and implementation notes. Prefer targeted docs over a broad repository README.`;
+      return `The user asked: "${originalPrompt}". Focus on technical documentation first: modules, endpoints, services, architecture, and implementation notes. Prefer targeted docs over a broad repository README. ${DIRECT_DELEGATION_NOTE}`;
     case DOCUMENTATION_CHOICES.ALL:
-      return `The user asked: "${originalPrompt}". Make a documentation plan that covers, in order: 1) AGENTS.md for operational context, 2) README.md for human onboarding, 3) OpenSpec references/specifications if applicable, and 4) targeted technical docs. Ask before writing a broad README if the repo context is still unclear.`;
+      return `The user asked: "${originalPrompt}". Make a documentation plan that covers, in order: 1) AGENTS.md for operational context, 2) README.md for human onboarding, 3) OpenSpec references/specifications if applicable, and 4) targeted technical docs. Ask before writing a broad README if the repo context is still unclear. Delegate each substantial repository-documentation step through one focused subagent or the matching sdd-stack phase command, not an ad-hoc scout->worker chain with outputSchema unless structured_output JSON is explicitly required.`;
     case DOCUMENTATION_CHOICES.OTHER:
-      return `The user asked: "${originalPrompt}". They clarified the documentation target as: "${customRequest ?? "No extra detail provided."}". Follow that clarification exactly and avoid defaulting to README if another documentation surface fits better.`;
+      return `The user asked: "${originalPrompt}". They clarified the documentation target as: "${customRequest ?? "No extra detail provided."}". Follow that clarification exactly and avoid defaulting to README if another documentation surface fits better. ${DIRECT_DELEGATION_NOTE}`;
   }
 }
 
